@@ -1,3 +1,6 @@
+import pathlib
+from datetime import datetime
+
 import pandas as pd
 
 import math
@@ -9,7 +12,9 @@ import itertools
 import sys
 
 # Global Variable
-msg_pls_enter_data = 'กรุณาระบุข้อมูล'
+msg_pls_enter_data = 'Please enter data'
+msg_pls_selected_excel_file_before_cal = 'Please select excel file before calculate'
+msg_excel_file_only = 'Please select excel file (.xlsx) only'
 
 
 def readFileExcel(filename):
@@ -20,6 +25,35 @@ def readFileExcel(filename):
 
     dataframe = pd.read_excel(filename)
     return dataframe
+
+
+def writeFileExcel(shapley_dict):
+    try:
+        if shapley_dict is None or len(shapley_dict) < 0:
+            raise Exception(msg_pls_enter_data)
+
+        x_interest = []
+        shapley_value = []
+        key_of_shapley_dict = list(shapley_dict.keys())
+
+        for key in key_of_shapley_dict:
+            x_interest.append(key)
+            shapley_value.append(shapley_dict.get(key))
+
+        df = pd.DataFrame({'Variable "X" of Interest': x_interest, 'Shapley Value': shapley_value})
+
+        current_date = datetime.now()
+        current_date = current_date.strftime("%d%m%Y%H%M%S")
+        current_path = pathlib.Path(__file__).parent.absolute()
+        filename = file_path.split('\\')
+        filename = filename[len(filename) - 1].split('.')
+        filename_for_writer = "{path}\\{name}_calculate_{date}.xlsx".format(path=current_path, name=filename[0],
+                                                                            date=current_date)
+
+        df.to_excel(filename_for_writer, sheet_name='{name}_calculate'.format(name=filename[0]), index=False,
+                    header=True)
+    except Exception as ex:
+        print(ex)
 
 
 def combinations(func_x_of_head_list):
@@ -67,9 +101,9 @@ def calRSquare(x_var_list, main_data_var, main_y_var):
 def calculateShapley(filepath):
     try:
         if filepath is None or filepath == '':
-            raise Exception("Please select excel file before calculate")
+            raise Exception(msg_pls_selected_excel_file_before_cal)
         elif filepath.find('xlsx') < 0:
-            raise Exception("Please select excel file (.xlsx) only")
+            raise Exception(msg_excel_file_only)
 
         data = readFileExcel(filepath)
 
@@ -96,9 +130,7 @@ def calculateShapley(filepath):
         x_list_for_match = x_list
         head_list = head
 
-        valid_a_match_list = []
-        valid_b_match_list = []
-        valid_c_match_list = []
+        shapley_value_dict = {}
 
         for head in head_list:
             print(f'[Log] Interest in {head}')
@@ -152,7 +184,6 @@ def calculateShapley(filepath):
 
             # คำนวณค่า Shapley value ตาม X ที่สนใจ
             m = len(head_list)  # m = จำนวนตัวแปรอิสระทั้งหมดในสมการต้นแบบ
-            shapley_value_dict = {}
             shapley_value_total = 0
 
             for match in match_a_into_b:
@@ -161,7 +192,9 @@ def calculateShapley(filepath):
                     r_square_1 = x_of_rsquare_dict.get(data[0])
                     r_square_2 = x_of_rsquare_dict.get(data[len(data) - 1]) if (len(data) - 1) > 0 else 0
                     shapley_value_total += math.fabs((r_square_1 - r_square_2) / k)
-            print(f'[Log] Total Shapley Value is {shapley_value_total / m}')
+            shapley_value_dict[head] = shapley_value_total / m
+            print(f'[Log] Total Shapley Value is {shapley_value_dict[head]}')
+        return shapley_value_dict
     except Exception as ex:
         print(ex)
 
@@ -170,4 +203,6 @@ def calculateShapley(filepath):
 if __name__ == '__main__':
     file_path = sys.argv[1:][0] if (len(sys.argv[1:])) > 0 else None
 
-    calculateShapley(file_path)
+    shapley = calculateShapley(file_path)
+
+    writeFileExcel(shapley)
