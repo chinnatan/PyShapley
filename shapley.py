@@ -1,6 +1,8 @@
+import os
 import pathlib
 from datetime import datetime
 
+import keyboard as keyboard
 import pandas as pd
 
 import math
@@ -13,7 +15,7 @@ import sys
 
 # Global Variable
 msg_pls_enter_data = 'Please enter data'
-msg_pls_selected_excel_file_before_cal = 'Please select excel file before calculate'
+msg_pls_selected_excel_file = "Please select excel file before calculate"
 msg_excel_file_only = 'Please select excel file (.xlsx) only'
 
 
@@ -57,9 +59,6 @@ def writeFileExcel(shapley_dict):
 
 
 def combinations(func_x_of_head_list):
-    if not len(func_x_of_head_list):
-        return msg_pls_enter_data
-
     comb_list = []
     for i in range(1, len(func_x_of_head_list) + 1):
         for j in itertools.combinations(func_x_of_head_list, i):
@@ -68,9 +67,6 @@ def combinations(func_x_of_head_list):
 
 
 def manageXofHeadList(x_var_list):
-    if not len(x_var_list):
-        return msg_pls_enter_data
-
     result_x_list = []
     for x_var in x_var_list:
         _x = []
@@ -81,9 +77,6 @@ def manageXofHeadList(x_var_list):
 
 
 def calRSquare(x_var_list, main_data_var, main_y_var):
-    if not len(x_var_list):
-        return msg_pls_enter_data
-
     x_of_rsquare_dict = {}
 
     for i in x_var_list:
@@ -101,11 +94,12 @@ def calRSquare(x_var_list, main_data_var, main_y_var):
 def calculateShapley(filepath):
     try:
         if filepath is None or filepath == '':
-            raise Exception(msg_pls_selected_excel_file_before_cal)
+            raise Exception(msg_pls_selected_excel_file)
         elif filepath.find('xlsx') < 0:
             raise Exception(msg_excel_file_only)
 
         data = readFileExcel(filepath)
+        # print(f'[Log] Data is {data}')
 
         y = data['Y']
 
@@ -166,7 +160,7 @@ def calculateShapley(filepath):
 
             for i in range(len(valid_a_match_list)):
                 new_flag = len(valid_a_match_list[i])  # กำหนด flag เพื่อตรวจสอบว่าเป็น step เดียวกันไหม
-                if flag == 0:
+                if flag == 0:  # เข้าลูปครั้งแรก
                     flag = new_flag
                 if flag != new_flag:
                     match_a_into_b.append(match_for_k)
@@ -199,10 +193,19 @@ def calculateShapley(filepath):
         print(ex)
 
 
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    file_path = sys.argv[1:][0] if (len(sys.argv[1:])) > 0 else None
+    print('########################################')
+    print('##          Shapley Program           ##')
+    print('########################################')
+    while True:
+        file_path = input('Please enter your excel path : ')
 
-    shapley = calculateShapley(file_path)
+        shapley = calculateShapley(file_path)
 
-    writeFileExcel(shapley)
+        if shapley:
+            print('[Log] Calculate Success')
+            writeFileExcel(shapley)
+            shapley = None
+            print('###################################################################')
+            print('[Log] You can calculate again but if not you can close this program')
+            print('###################################################################')
